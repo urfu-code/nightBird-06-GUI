@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import wood01.Action;
 import wood01.Point;
 import wood01.PrintableTheWood;
+import wood01.WoodException;
 
 public class TheWoodServerThread implements Runnable {
 	
@@ -22,9 +24,13 @@ public class TheWoodServerThread implements Runnable {
 	private Point endPoint;
 	private TheWoodServerThreadSyncronizer monitor;
 	private HashMap<String,Integer>leaders;
+	private ArrayList<Point>startPoints;
+	private ArrayList<Point>endPoints;
 	
-	public TheWoodServerThread(Socket socket, PrintableTheWood wood,Point startPoint,Point endPoint, TheWoodServerThreadSyncronizer monitor, HashMap<String,Integer> leaders) throws IOException {
+	public TheWoodServerThread(Socket socket, PrintableTheWood wood,Point startPoint,Point endPoint, TheWoodServerThreadSyncronizer monitor, HashMap<String,Integer> leaders, ArrayList<Point> startPoints, ArrayList<Point> endPoints) throws IOException {
 		fromClient = socket;
+		this.startPoints = startPoints;
+		this.endPoints = endPoints;
 		this.wood = wood;
 		this.monitor = monitor;
 		this.startPoint = startPoint;
@@ -72,12 +78,18 @@ public class TheWoodServerThread implements Runnable {
 				}
 				System.out.println("Мышка " + request.getName() + " нашла выход!");
 			}
-		}
-		catch (IOException e) {
+		} catch (WoodException e) {
+			System.out.println("Неудачная точка или имя вудмана");
+			if (e.getMessage().equals("WoodmanInWall") || e.getMessage().equals("isNotAWood")) {
+				startPoints.remove(startPoint);
+			}
+			else if(e.getMessage().equals("IncorrectFinish")) {
+				endPoints.remove(endPoint);
+			}
+		} catch (IOException e) {
 			System.out.println("Ошибка связи");
 		} catch (Exception e) {
 			System.out.println("Ошибка с мышью");
-			e.printStackTrace();
 		}
 		finally {
 			try {

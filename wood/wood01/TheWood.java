@@ -21,22 +21,22 @@ public class TheWood implements Wood {
 	@Override
 	public void createWoodman(String name, Point start, Point finish) throws Exception {
 		if (woodmans.containsKey(name)) {
-			throw new Exception("nameExisting");
+			throw new WoodException("nameExisting");
 		}
 		else if ((start.getX() < 0)||(start.getY() < 0)||
 			(start.getX() >= wood[0].length)||(start.getY() >= wood.length)) {
-			throw new Exception("isNotAWood");
+			throw new WoodException("isNotAWood");
 		}
 		else if (wood[start.getY()][start.getX()] == '1') {
-			throw new Exception("WoodmanInWall");
+			throw new WoodException("WoodmanInWall");
 		}
-		woodmans.put(name,new TheWoodman(name, start));
 		if ((finish.getX() < 0)||(finish.getY() < 0)||(finish.getX() > wood[0].length)||(finish.getY() >= wood.length)) {
-			throw new Exception("IncorrectFinish");
+			throw new WoodException("IncorrectFinish");
 		}
 		if (wood[finish.getY()][finish.getX()] == '1') {
-			throw new Exception("IncorrectFinish");
+			throw new WoodException("IncorrectFinish");
 		}
+		woodmans.put(name,new TheWoodman(name, start));
 		woodmansFinish.put(name, finish);
 	}
 

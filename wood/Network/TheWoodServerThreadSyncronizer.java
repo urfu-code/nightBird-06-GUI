@@ -24,6 +24,7 @@ public class TheWoodServerThreadSyncronizer implements Runnable {
 				break;
 			} catch (Exception e) {
 				System.out.println("Ошибка в отрисовке!");
+				e.printStackTrace();
 			}
 		}
 	}

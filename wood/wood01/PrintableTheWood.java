@@ -7,10 +7,11 @@ import java.awt.GridBagConstraints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
+
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -18,7 +19,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.border.LineBorder;
 
 
@@ -26,12 +26,12 @@ import javax.swing.border.LineBorder;
 public class PrintableTheWood extends TheWood {
 	//'┌','─','┬','┐','│','┼','┤','├','└','─','┴','┘','♥','Ⓣ',' ','□'
     //'α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','ς','σ','τ','υ','φ','χ','ψ','ω'	
-	@Deprecated
-	private Map<String,Character>graphList;
-	@Deprecated
-	private Map<String,Character>woodmanNames;
-	@Deprecated
-	private char[] nameList;
+//	@Deprecated
+//	private Map<String,Character>graphList;
+//	@Deprecated
+//	private Map<String,Character>woodmanNames;
+//	@Deprecated
+//	private char[] nameList;
 	private BufferedImage wall;
 	private BufferedImage trap;
 	private BufferedImage free;
@@ -43,13 +43,19 @@ public class PrintableTheWood extends TheWood {
 	private HashMap<String,JLabel>endPoints;
 	private HashMap<String,Integer> leaders;
 	private HashMap<String,JLabel>mouseImages;
-	private JTextArea leadersArea;
+	private JPanel leadersArea;
 	private Queue<Color> colorList;
 	private HashMap<String,JLabel> legendLabels;
-	
-	private char getElement(int i,int j) {
-		return wood[i][j];
-	}
+	private int oldSize;
+	private int oldEndPointsSize;
+	private int oldStartPointsSize;
+	private ArrayList<Point> endPointsArray;
+	private ArrayList<Point> startPointsArray;
+	private JPanel pointsArea;
+//	@Deprecated
+//	private char getElement(int i,int j) {
+//		return wood[i][j];
+//	}
 	public PrintableTheWood(char[][] _wood,OutputStream _stream) throws Exception {
 		super(_wood);
 		legendLabels = new HashMap<String,JLabel>();
@@ -95,27 +101,33 @@ public class PrintableTheWood extends TheWood {
 //		graphList.put("Trap",'ѻ');
 //		nameList = new char[]{'α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','ς','σ','τ','υ','φ','χ','ψ','ω'};	
 	}
-	@Deprecated
-	private void printWood(OutputStream stream) throws Exception {
-		char[] line = new char[wood[0].length];
-		for (int i = 0; i < wood.length; i++) {
-			for (int j = 0; j < wood[0].length; j++) {
-				line[j] = findElement(i,j);
-			}
-			String str = new String(line);
-			stream.write((str + "\n").getBytes());
-		}
-		stream.write("------------\n".getBytes());
-		stream.write(("♥" + " - live\n").getBytes());
-		stream.write(("ѻ" + " - trap\n").getBytes());
-		stream.write("------------\n".getBytes());
-		for (TheWoodman i:woodmans.values()) {
-			stream.write((i.GetName() + " (" + getWoodmanName(i.GetName()) + ")" + " - " + i.GetLifeCount() + " live(s)\n").getBytes());
-		}
-	}
-	public void paintWood(JFrame window, HashMap<String,Integer> leaders) throws Exception {
+//	@Deprecated
+//	private void printWood(OutputStream stream) throws Exception {
+//		char[] line = new char[wood[0].length];
+//		for (int i = 0; i < wood.length; i++) {
+//			for (int j = 0; j < wood[0].length; j++) {
+//				line[j] = findElement(i,j);
+//			}
+//			String str = new String(line);
+//			stream.write((str + "\n").getBytes());
+//		}
+//		stream.write("------------\n".getBytes());
+//		stream.write(("♥" + " - live\n").getBytes());
+//		stream.write(("ѻ" + " - trap\n").getBytes());
+//		stream.write("------------\n".getBytes());
+//		for (TheWoodman i:woodmans.values()) {
+//			stream.write((i.GetName() + " (" + getWoodmanName(i.GetName()) + ")" + " - " + i.GetLifeCount() + " live(s)\n").getBytes());
+//		}
+//	}
+	public void paintWood(JFrame window, HashMap<String,Integer> leaders,ArrayList<Point>startPoints, ArrayList<Point>endPoints, JPanel pointsArea) throws Exception {
 		this.GUI = window;
+		this.pointsArea = pointsArea;
 		this.leaders = leaders;
+		this.startPointsArray = startPoints;
+		this.endPointsArray = endPoints;
+		this.oldStartPointsSize = startPoints.size();
+		this.oldEndPointsSize = endPoints.size();
+		oldSize = leaders.size();
 		GridBagConstraints c = new GridBagConstraints();
 		c.gridy = 13;
 		c.gridwidth = 4;
@@ -123,10 +135,11 @@ public class PrintableTheWood extends TheWood {
 		c.anchor = GridBagConstraints.NORTHWEST;
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridheight = GridBagConstraints.RELATIVE;
-		leadersArea = new JTextArea("Список лидеров:\r\n");
+		leadersArea = new JPanel();
+		leadersArea.setLayout(new BoxLayout(leadersArea, BoxLayout.Y_AXIS));
+		leadersArea.add(new JLabel("Список лидеров:\r\n"));
 		JScrollPane leadersPane = new JScrollPane(leadersArea);
 		leadersPane.setPreferredSize(new Dimension(0,200));
-		leadersArea.setEditable(false);
 		leadersPane.setBorder(new LineBorder(Color.GREEN));
 		GUI.add(leadersPane,c);
 		c = new GridBagConstraints();
@@ -190,16 +203,60 @@ public class PrintableTheWood extends TheWood {
 					if (woodmanPosition.getX() == k && woodmanPosition.getY() == j) {
 						c.gridx = k + 6;
 						c.gridy = j;
-						GUI.add(mouseImages.get(i.GetName()),c);
+						GUI.add(mouseImages.get(i.GetName()),c, GUI.getComponentCount());
 						continue loop;
 					}
 				}
 			}
 		}
-		leadersArea.revalidate();
+		if (leaders.size() > oldSize) {
+			sortNames();
+			oldSize = leaders.size();
+		}
+		if (startPointsArray.size() != oldStartPointsSize || endPointsArray.size() != oldEndPointsSize) {
+			repaintPoints();
+			oldStartPointsSize = startPointsArray.size();
+			oldEndPointsSize = endPointsArray.size();
+		}
 		legend.revalidate();
 		GUI.pack();
 		GUI.repaint();
+	}
+	private void repaintPoints() {
+		pointsArea.removeAll();
+		for (int i = 0; i < startPointsArray.size(); i++) {
+			pointsArea.add(new JLabel(startPointsArray.get(i).toString()));
+		}
+		for (int i = 0; i < endPointsArray.size(); i++) {
+			pointsArea.add(new JLabel(endPointsArray.get(i).toString()));
+		}
+	}
+	private void sortNames() {
+		LinkedList<String> list = new LinkedList<String>();
+		leadersArea.removeAll();
+		for (String i:leaders.keySet()) { 
+			if (list.size() < 1) {
+				list.add(i);
+			}
+			else if (leaders.get(list.getFirst()) >= leaders.get(i)) {
+				list.addFirst(i);
+			}
+			else if (leaders.get(list.getLast()) <= leaders.get(i)) {
+				list.addLast(i);
+			}
+			else {
+				for (int j = 1; j < list.size(); j++) {
+					if (leaders.get(i) <= leaders.get(list.get(j))) {
+						list.add(j,i);
+						break;
+					}
+				}
+			}
+		}
+		for (int i = 0; i < list.size(); i++) {
+			System.out.println(list.get(i));
+			leadersArea.add(new JLabel( (i+1) + "." + list.get(i) + " - " +leaders.get(list.get(i)) + " ходов."));
+		}
 	}
 	private Component newGraphUnit(char c) {
 		switch (c) {
@@ -215,68 +272,68 @@ public class PrintableTheWood extends TheWood {
 			return null;
 		}
 	}
-	@Deprecated
-	private char getWoodmanName(String name) throws Exception {
-		if (woodmanNames.containsKey(name)) {
-			return woodmanNames.get(name);
-		}
-		for (int i = 0; i < nameList.length; i++) {
-			if (nameList[i] != 'N') {
-				woodmanNames.put(name, nameList[i]);
-				nameList[i] = 'N';
-				return woodmanNames.get(name);
-			}
-		}
-		throw new Exception("обозначалки для персонажей кончились :((");
-	}
-	@Deprecated
-	private char findElement(int line, int column) throws Exception
-	{
-		Point currentPoint = new Point(column,line);
-		for (TheWoodman i:woodmans.values()) {
-			if (i.GetLocation().equals(currentPoint)) {
-				return getWoodmanName(i.GetName());
-			}
-		}
-		switch (getElement(line,column)) {
-		
-		case 'L':
-			//life
-			return graphList.get("Life");
-		case 'K':
-			//trap
-			return graphList.get("Trap");
-		case '0':
-			//free
-			return graphList.get("0");
-		default:
-			break;
-			
-		}
-		StringBuffer element = new StringBuffer();
-		//up
-		if ((line - 1 >= 0)&&(getElement(line - 1,column) == '1')) {
-			element.append("U");
-		}
-		//left
-		if ((column - 1 >= 0)&&(getElement(line,column - 1) == '1')) {
-			element.append("L");
-		}
-		//down
-		if ((line + 1 < wood.length)&&(getElement(line + 1,column) == '1')) {
-			element.append("D");
-		}
-		//right
-		if ((column + 1 < wood[0].length)&&(getElement(line,column + 1) == '1')) {
-			element.append("R");
-		}
-		if (element.length() > 0) {
-			return graphList.get(element.toString());
-		}
-		else {
-			return graphList.get("A");
-		}
-	}
+//	@Deprecated
+//	private char getWoodmanName(String name) throws Exception {
+//		if (woodmanNames.containsKey(name)) {
+//			return woodmanNames.get(name);
+//		}
+//		for (int i = 0; i < nameList.length; i++) {
+//			if (nameList[i] != 'N') {
+//				woodmanNames.put(name, nameList[i]);
+//				nameList[i] = 'N';
+//				return woodmanNames.get(name);
+//			}
+//		}
+//		throw new Exception("обозначалки для персонажей кончились :((");
+//	}
+//	@Deprecated
+//	private char findElement(int line, int column) throws Exception
+//	{
+//		Point currentPoint = new Point(column,line);
+//		for (TheWoodman i:woodmans.values()) {
+//			if (i.GetLocation().equals(currentPoint)) {
+//				return getWoodmanName(i.GetName());
+//			}
+//		}
+//		switch (getElement(line,column)) {
+//		
+//		case 'L':
+//			//life
+//			return graphList.get("Life");
+//		case 'K':
+//			//trap
+//			return graphList.get("Trap");
+//		case '0':
+//			//free
+//			return graphList.get("0");
+//		default:
+//			break;
+//			
+//		}
+//		StringBuffer element = new StringBuffer();
+//		//up
+//		if ((line - 1 >= 0)&&(getElement(line - 1,column) == '1')) {
+//			element.append("U");
+//		}
+//		//left
+//		if ((column - 1 >= 0)&&(getElement(line,column - 1) == '1')) {
+//			element.append("L");
+//		}
+//		//down
+//		if ((line + 1 < wood.length)&&(getElement(line + 1,column) == '1')) {
+//			element.append("D");
+//		}
+//		//right
+//		if ((column + 1 < wood[0].length)&&(getElement(line,column + 1) == '1')) {
+//			element.append("R");
+//		}
+//		if (element.length() > 0) {
+//			return graphList.get(element.toString());
+//		}
+//		else {
+//			return graphList.get("A");
+//		}
+//	}
 		@Override
 	public Action move(String name, Direction direction) throws Exception {
 		Action currentAction;
@@ -317,7 +374,6 @@ public class PrintableTheWood extends TheWood {
 		colorList.offer(mouseColor);
 		mouseImages.get(name).setBorder(new LineBorder(mouseColor));
 		mouseImages.get(name).setPreferredSize(new Dimension(30,30));
-//		Добавить в легенду еще надо
 		JLabel label = new JLabel(new ImageIcon(mouse));
 		label.setText(super.woodmans.get(name).GetName() + " " + super.woodmans.get(name).GetLifeCount() + " - Жизней(и)\r\n");
 		label.setBorder(new LineBorder(mouseColor));

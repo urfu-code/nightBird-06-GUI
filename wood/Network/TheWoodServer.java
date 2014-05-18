@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 
 
@@ -23,10 +22,12 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.border.LineBorder;
@@ -43,6 +44,8 @@ public class TheWoodServer {
 	private static ArrayList<Point>endPoints;
 	private static ArrayList<Point>startPoints;
 	private static HashMap<String,Integer> leaders;
+	private static PrintableTheWood wood;
+	private static JPanel pointsArea;
 	
 	public static void main(String[] Args) {
 		ServerSocket server = null;
@@ -78,8 +81,8 @@ public class TheWoodServer {
 				synchronized (syncObj) {
 					syncObj.wait();
 				}
-				PrintableTheWood wood = (PrintableTheWood) loader.Load(new FileInputStream(new File( (String) woodSelector.getSelectedItem())),System.out);
-				wood.paintWood(GUI,leaders);
+				wood = (PrintableTheWood) loader.Load(new FileInputStream(new File( (String) woodSelector.getSelectedItem())),System.out);
+				wood.paintWood(GUI,leaders,startPoints,endPoints,pointsArea);
 				System.out.println("Server started! Waiting for connection...");
 				TheWoodServerThreadSyncronizer sync = new TheWoodServerThreadSyncronizer(wood);
 				Thread threadSync = new Thread(sync);
@@ -87,21 +90,21 @@ public class TheWoodServer {
 				int startPointChooserCounter = 0;
 				int endPointChooserCounter = 0;
 				while (true) {
-					try {
-						thread = new Thread(new TheWoodServerThread(server.accept(), wood,startPoints.get(startPointChooserCounter),endPoints.get(endPointChooserCounter) , sync, leaders));
-						thread.start();
-						startPointChooserCounter++;
-						endPointChooserCounter++;
-						if (startPointChooserCounter >= startPoints.size()) {
-							startPointChooserCounter = 0;
-						}
-						if (endPointChooserCounter >= endPoints.size()) {
-							endPointChooserCounter = 0;
-						}
+					if (startPointChooserCounter >= startPoints.size()) {
+						startPointChooserCounter = 0;
 					}
-					catch (SocketTimeoutException e) {
+					if (endPointChooserCounter >= endPoints.size()) {
+						endPointChooserCounter = 0;
+					}
+					if (endPoints.size() < 1 || startPoints.size() < 1) {
+						startButton.setText("Нет точек!");
 						continue;
 					}
+					startButton.setText("Завершить");
+					thread = new Thread(new TheWoodServerThread(server.accept(), wood,startPoints.get(startPointChooserCounter),endPoints.get(endPointChooserCounter) , sync, leaders,startPoints, endPoints));
+					thread.start();
+					startPointChooserCounter++;
+					endPointChooserCounter++;
 				}
 			}
 			catch (ClassNotFoundException e) {
@@ -158,8 +161,9 @@ public class TheWoodServer {
 //		Кнопка добавления точки
 		addStartPointButton = new JButton("Добавить начало");
 		addFinishPointButton = new JButton("Добавить финиш");
-		final JTextArea pointsArea = new JTextArea("Точки: \r\n");
-		pointsArea.setEditable(false);
+		pointsArea = new JPanel();
+		pointsArea.setLayout(new BoxLayout(pointsArea, BoxLayout.Y_AXIS));
+		pointsArea.add(new JLabel("Точки: \r\n"));
 		final JScrollPane points = new JScrollPane(pointsArea);
 		final JTextArea xAreaStart = new JTextArea();
 		xAreaStart.setPreferredSize(new Dimension(20,14));
@@ -182,12 +186,12 @@ public class TheWoodServer {
 					}
 					else {
 						startPoints.add(point);
-						scannerX.close();
-						scannerY.close();
-						pointsArea.append("Старт: " + startPoints.get(startPoints.size() - 1).toString() + "\r\n");
+						pointsArea.add(new JLabel("Старт: " + startPoints.get(startPoints.size() - 1).toString() + "\r\n"));
 						points.revalidate();
 						addStartPointButton.setText("Добавить точку");
 					}
+					scannerX.close();
+					scannerY.close();
 				} catch (Exception e) {
 					addStartPointButton.setText("Не удалось");
 				}
@@ -206,12 +210,12 @@ public class TheWoodServer {
 					}
 					else {
 						endPoints.add(point);
-						scannerX.close();
-						scannerY.close();
-						pointsArea.append("Финиш: " + endPoints.get(endPoints.size() - 1).toString() + "\r\n");
+						pointsArea.add(new JLabel("Финиш: " + endPoints.get(endPoints.size() - 1).toString() + "\r\n"));
 						points.revalidate();
 						addFinishPointButton.setText("Добавить точку");
 					}
+					scannerX.close();
+					scannerY.close();
 				} catch (Exception e1) {
 					addFinishPointButton.setText("Не удалось");
 				}
@@ -237,6 +241,7 @@ public class TheWoodServer {
 		c.weighty = 0.0;
 		GUI.add(woodSelector, c);
 		c.gridy = 1;
+		startButton.setPreferredSize(new Dimension(120,30));
 		GUI.add(startButton, c);
 		c.gridy = 2;
 		GUI.add(addStartPointButton, c);
